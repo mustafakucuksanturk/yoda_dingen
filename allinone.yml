@@ -1,0 +1,228 @@
+---
+# copyright Utrecht University
+
+########################
+# Ansible configuration
+########################
+ansible_user: vagrant                             # Administrative user on instance for Ansible
+ansible_ssh_private_key_file: vagrant/ssh/vagrant # Path to private key file of administrative user
+
+#####################
+# Yoda configuration
+#####################
+instance: allinone                                 # Name of Yoda instance, as defined in hosts file
+yoda_version: development                          # Git branch, for example: development or release-1.4
+yoda_environment: development                      # Yoda environment: development, testing, acceptance or production
+yoda_portal_fqdn: portal.yoda.test                 # Yoda Portal fully qualified domain name (FQDN)
+yoda_davrods_fqdn: data.yoda.test                  # Yoda Davrods WebDAV fully qualified domain name (FQDN)
+yoda_davrods_anonymous_fqdn: public.data.yoda.test # Yoda Davrods anonymous WebDAV fully qualified domain name (FQDN)
+
+######################
+# Yoda Portal modules
+######################
+modules:
+  - name: group-manager
+    repo: "https://github.com/UtrechtUniversity/yoda-portal-group-manager.git"
+    dest: /var/www/yoda/yoda-portal/modules/group-manager
+    version: "{{ yoda_version }}"
+  - name: research
+    repo: "https://github.com/UtrechtUniversity/yoda-portal-research.git"
+    dest: /var/www/yoda/yoda-portal/modules/research
+    version: "{{ yoda_version }}"
+  - name: statistics
+    repo: "https://github.com/UtrechtUniversity/yoda-portal-statistics.git"
+    dest: /var/www/yoda/yoda-portal/modules/statistics
+    version: "{{ yoda_version }}"
+  - name: intake
+    repo: "https://github.com/UtrechtUniversity/yoda-portal-intake.git"
+    dest: /var/www/yoda/yoda-portal/modules/intake
+    version: "{{ yoda_version }}"
+
+######################
+# iRODS configuration
+######################
+irods_admin: rods                          # iRODS admin username
+irods_password: rods                       # iRODS admin password
+irods_database_user: irodsdb               # The iRODS database username
+irods_database_password: irodsdev          # The password for the iRODS database username
+irods_zone: tempZone                       # The name of the iRODS Zone
+irods_icat_fqdn: combined.yoda.test        # iRODS iCAT fully qualified domain name (FQDN)
+irods_database_fqdn: combined.yoda.test    # iRODS database fully qualified domain name (FQDN)
+irods_resource_fqdn: combined.yoda.test    # iRODS resource fully qualified domain name (FQDN)
+irods_default_resc: irodsResc              # iRODS default resource name
+irods_ssl_verify_server: none              # Verify TLS certificate, use 'cert' for acceptance and production
+irods_resources:
+  - name: dev001_1
+    host: "{{ irods_icat_fqdn }}"
+    vault_path: /var/lib/irods/Vault1_1
+    resource_type: unixfilesystem
+
+  - name: dev001_2
+    resource_type: unixfilesystem
+    host: "{{ irods_icat_fqdn }}"
+    vault_path: /var/lib/irods/Vault1_2
+
+  - name: dev001_p1
+    resource_type: passthru
+    children:
+      - dev001_1
+
+  - name: dev001_p2
+    resource_type: passthru
+    children:
+      - dev001_2
+
+  - name: dev001
+    resource_type: random
+    children:
+      - dev001_p1
+      - dev001_p2
+
+  - name: irodsResc
+    resource_type: random
+    children:
+      - dev001
+
+  - name: dev002_1
+    resource_type: unixfilesystem
+    host: "{{ irods_resource_fqdn }}"
+    vault_path: /var/lib/irods/Vault2_1
+
+  - name: dev002_p1
+    resource_type: passthru
+    children:
+      - dev002_1
+
+  - name: dev002
+    resource_type: random
+    children:
+      - dev002_p1
+
+  - name: irodsRescRepl
+    resource_type: random
+    children:
+      - dev002
+
+########################
+# Ruleset configuration
+########################
+rulesets:
+  - name: irods-ruleset-youth-cohort
+    repo: https://github.com/UtrechtUniversity/irods-ruleset-youth-cohort.git
+    ruleset_name: rules-yc
+    version: "{{ yoda_version }}"
+    install_scripts: no
+  - name: irods-ruleset-i-lab
+    repo: https://github.com/UtrechtUniversity/irods-ruleset-i-lab.git
+    ruleset_name: rules-i-lab
+    version: "{{ yoda_version }}"
+    install_scripts: no
+  - name: irods-ruleset-research
+    repo: https://github.com/UtrechtUniversity/irods-ruleset-research.git
+    ruleset_name: rules-research
+    version: "{{ yoda_version }}"
+    install_scripts: yes
+  - name: irods-ruleset-uu
+    repo: https://github.com/UtrechtUniversity/irods-ruleset-uu.git
+    ruleset_name: rules-uu
+    version: "{{ yoda_version }}"
+    install_scripts: yes
+  - name: core
+    ruleset_name: core
+    path: /etc/irods/core.re
+    install_scripts: no
+
+################################
+# Research module configuration
+################################
+default_yoda_schema: test      # Default Yoda XML scheme: default or test
+enable_revisions: 1            # Enable revisions: yes (1) or no (0)
+revision_strategy: B           # Revision strategy: A, B, J or Simple
+yoda_random_id_length: 6       # Length of random ID to add to persistent identifier
+yoda_prefix: UU01              # Prefix for internal portion of persistent identifier
+update_rulesets: yes           # Update already installed rulesets with git
+update_schemas: 1              # Update already installed schemas, formelements and stylesheets: yes (1) or no (0)
+credential_files: PLACEHOLDER  # Location of Yoda credentials files
+
+#####################
+# Mail notifications
+#####################
+send_notifications: 1               # Enable notifications: yes (1) or no (0)
+notifications_sender_email: noreply@yoda.test # Notifiations sender email address
+notifications_reply_to: noreply@yoda.test     # Notifiations Reply-To email address
+smtp_server: smtps://smtp.gmail.com:465 # SMTP server to send mail to
+smtp_username: yodamailtest@gmail.com   # SMTP server username
+smtp_password: yodamailtest123          # SMTP server password
+
+#########################
+# DataCite Configuration
+#########################
+datacite_username: DELFT.UU             # DataCite username
+datacite_password: Yodarocks4u          # DataCite password
+datacite_prefix: 10.5072                # DataCite DOI prefix
+datacite_server: mds.test.datacite.org  # DataCite server URI
+
+#########################
+# EPIC Configuration
+#########################
+epic_url: https://epic5.storage.surfsara.nl:8003/api/handles
+epic_handle_prefix: 21.T12996
+epic_cert: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUV1akNDQXFJQ0NRQ2l5VXlBT2JpY0xUQU5CZ2txaGtpRzl3MEJBUXNGQURBZk1SMHdHd1lEVlFRRERCUXoKTVRjNk1qRXVWREV5T1RrMkwxVlRSVkl3TVRBZUZ3MHhPREEwTWpNeE1EVXlNVGxhRncweU9EQTBNakl4TURVeQpNVGxhTUI4eEhUQWJCZ05WQkFNTUZETXhOem95TVM1VU1USTVPVFl2VlZORlVqQXhNSUlDSWpBTkJna3Foa2lHCjl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUFzaHNBL0hXdGVuSUVsREZjaHdhalhFYWNSTGRYNXhYZTZpSnUKVGl2WEJ5SCthU0pxNG1VSmp5WjZ4elQxLzJ3RHI1TDJEQVNCeEFxbkJ4YU1LYXd5SUNmZXRPSjdpZ3B4bW96OAppMUJYVXlLanRkRVVyUU9XVDltYnFZM1NaUGw1YnRGcVpvaU5YQmxUTXNndjI5NGJEUVRYQ1pyN1JSNkMvRlcwCkhVMysyVVprZndkdzVUcVRITEFQU1pIY2QxNWtUbzZOSzd4ZnZIMjJnNHE5WVhRekExMnQ0bHJZbVoxQ0NBS2IKYzNrQXI0UWxyWlB5c2ZwTlVPbnNjVEdMdDI3dXkwOHZoOThaaVB4M1IxZnpoZzJwTTQrai9NMGxLT1JuMVVMQwpIZE9NR3hMZGZaMHVaVHAwMHRNLzQ0QzNLN0ZmS2cyNVBtc3FmcGdoOE4rb0ZWbmtpSkNOdGFWUWtZb3FpbkpSCkwvYys1N3FrMW9LeFRMUHZjZ0JsYUZYNEk1Y0hPblRacCtJVEdtNnBKRCtVNVpDZzZTa1hkWGxjYlRNZXpSRDkKUmRQSFNFTStGcVh2L2FPN0lwUzBmZ1d5aGgzY0QxUjY0YXZjVlk4WUU4cXYxQ1NVU0l3NGpvaVZtZDYyNGI4TgpzN3BDRDgzUFA3THVxSWNqaGRReWwya2NwQ1ZwVzZWM0xaUUd1V3A0NWZWNmFtN2hYYTl0bWt2dEdGUzNMVGZZCmJtRGdnTzVtQ0VRQ2tGSXppUW40UExvcUYxclREdm9KMFM4bk5acmRPanJVaktaWm15dTNuVFJwWkR5WllLMTEKakdNSkRiUTd3MEY1enVVRVVibExjRzc1UWtVQlhjKytwYmQ4Wi9GTzhkRDlGWUN2NWhvdm1FRkVvNXluV05pZAo5ZlY0MTlFQ0F3RUFBVEFOQmdrcWhraUc5dzBCQVFzRkFBT0NBZ0VBVDg5U2VoWE94U0d5azRWeS9JNW4rQ2JVCndWUk5WVEVuNk1peHRMYXJYNWorOEIzd0lJSGh2MnlaWHQ1ODVvQjRwTyttSmpacXZXd3RRbTJMQnJlcXdFZHIKSytMZ1l6Q0pGQ1ZSd3dhZjAxQ2JUWkNKV1JIQ2FtVHpvZ1g5NHhUeDh3WFVpUWFDanFBUkRWSkFSTVU2RTBLaAprWjlpa29BZ1REN0IraktSb3k2VXBFaUdwa1FQK1VvWW5JTjE0K2VtTFNuM2JnQ29CR2N3RmZ5eWMvM2VSclRnCmlwNWxvaUl0NUVvYjhqTDhzYWdJZzQ2czl0b0ZPREpET1o2Q3BESE54Y3MyMkE3NzVkcG9PdW5LelkvNDVycEkKODFzbm9HdUwybGl4TlN1a1V4SEZ4aW1MU2puR0VlTGpzL1hWNVlFYXpOMTAvU0RxcllWUFpUdUZPdWVvWXUzNwo4VzZTS0FWc1N2L2drdzg4UXZtUDIzdm9EWDBTbEJrY3k1Qy83a2dIZ2k0ZTJDcFZoajljakNaOGRIcjUwYWhvCjExYWFSRDlFMFVLNzM4WlZoRjV0TUYyYTlDTDVScTRFNThjYzZIQXY0UVROemFjM044QWFLQWdEQ3FNdzRlSHoKalJ0TkQzaStleEtrbXZsRHhFK1BOQkZGVUR0aGlGTGJWSEdUdEQ3b3JlbnZYVXhVc3hZUjZDczcxeVNnekJjaQpyL1JXQkJpWnlxK1FGQllvTmR0UTVzbWhKTndpSldYMldPMWRROVZodTR0UzNRWnpJdnpGdWJ2SGk1YjNhM3pJCjUxT2E5RGxTQjlZSjNYaVI2d2YwQ1ZsNHVFTGp3WmxQQlk1T25UOWFIY3Bha2NQR3EzU0xnNU12cVdyeTRObEUKZHMrQ2dnOGdQZWRLRlBsQ0Fudz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ==
+epic_key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUpSQUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQ1M0d2dna3FBZ0VBQW9JQ0FRQ3lHd0Q4ZGExNmNnU1VNVnlIQnFOY1JweEUKdDFmbkZkN3FJbTVPSzljSElmNXBJbXJpWlFtUEpuckhOUFgvYkFPdmt2WU1CSUhFQ3FjSEZvd3ByRElnSjk2MDRudUtDbkdhalB5TApVRmRUSXFPMTBSU3RBNVpQMlp1cGpkSmsrWGx1MFdwbWlJMWNHVk15eUMvYjNoc05CTmNKbXZ0RkhvTDhWYlFkVGY3WlJtUi9CM0RsCk9wTWNzQTlKa2R4M1htUk9qbzBydkYrOGZiYURpcjFoZERNRFhhM2lXdGlablVJSUFwdHplUUN2aENXdGsvS3grazFRNmV4eE1ZdTMKYnU3TFR5K0gzeG1JL0hkSFYvT0dEYWt6ajZQOHpTVW81R2ZWUXNJZDA0d2JFdDE5blM1bE9uVFMwei9qZ0xjcnNWOHFEYmsrYXlwKwptQ0h3MzZnVldlU0lrSTIxcFZDUmlpcUtjbEV2OXo3bnVxVFdnckZNcys5eUFHVm9WZmdqbHdjNmRObW40aE1hYnFra1A1VGxrS0RwCktSZDFlVnh0TXg3TkVQMUYwOGRJUXo0V3BlLzlvN3NpbExSK0JiS0dIZHdQVkhyaHE5eFZqeGdUeXEvVUpKUklqRGlPaUpXWjNyYmgKdncyenVrSVB6Yzgvc3U2b2h5T0YxREtYYVJ5a0pXbGJwWGN0bEFhNWFuamw5WHBxYnVGZHIyMmFTKzBZVkxjdE45aHVZT0NBN21ZSQpSQUtRVWpPSkNmZzh1aW9YV3RNTytnblJMeWMxbXQwNk90U01wbG1iSzdlZE5HbGtQSmxnclhXTVl3a050RHZEUVhuTzVRUlJ1VXR3CmJ2bENSUUZkejc2bHQzeG44VTd4MFAwVmdLL21HaStZUVVTam5LZFkySjMxOVhqWDBRSURBUUFCQW9JQ0FRQ002NHpXTkEzMHllNFIKaXhUWXlVbk1JeHBWekhOQ3BpMWdONm5yTkFqSTNmNjhGTDFaTC9SbVRWM3I3RjJQb1ZreFBDaHR6Y3NXNEE3VUx1VHJ2QkZWRy9hOApURTdQSkFCSzlxNkRWQ2dqNFU2QzkxRlNxM25zNkJLZ0QxU2ZERDBtajQrT1hSRHNCQ1d1RW5LN2xucjB6QldReGcxMTNQUnF6eXpaCjJ2Si8yNUI4YWRqTHBwTHJxZW9PbmRoQW9uRGZMeTlIb1o1bU4xbUhydWkxQ1FtcjZoMUE4ZnhiWHUvMkFvb1l6VzdiY01XWEYyNTUKbjhBNCt6MVhPb3Avc3NoQ0dQOVVsQk5TTGQvNmxQNWIzTWM1d3JkUHVNbGtGNFNJV20vWXhaOGZkTWZITWV5WnI2enJlclljUGFXdwpib0VMZHh4UTVONFVtQzZTdFlQNmtNdWVhRGRBODd1L05UODVuZTY3cUdCYysxRFFwd2xrUUluL0V6UWRGY2ljQVgxTG9lOVhYaEtwCmdmVXRYbUFuYnY2cUR1STczMno3cGhXdlEwdGdWZEJaRHZxOStYajFtcEZYcHM0VG5wbGdreGFTQmxlbHFnQXBNM24xbS94N0tXZFMKdDl2S1RQWGp3UnRvVExJQXZNWGJTRUc2ZWtwb1V3UnN3SzVqai9FUldidkpTeUoyZVorWjhqNWswZG50Y2dkdUw0bWgwbERPZEJRaQpsSWdCOFM0a2duVUNLN2R4b1hZdnB2c081U3M2RW9qRlBuZktROGlIcWRxMVVhdTcveFBJS2RKTmVzODFnTFV0amxSRk1JZlFsTExYCjFoVS9QTko4Zkh3L1lMOGJPQzV1UHRHbnJGYlF0Q0xzSDF2UlZaTHRYWnV5cHI1VGhYQlBlaHdnVlZCZytRS0NBUUVBMmhsUmhtQysKRWV4b1R5NEFuNFh2NUVnZWJKRTlIdzFsV1NRTWl2QlFzS0FWK0IraThGelJ5S1Bka3RyWDBkQnh4a1IxSWZETE55c1JNL0FIdDc0YgpJT0ZXZG1YL1pqY1pxWmZnQ1RBSzQ0RmY4NjRrajRDK0dRYzR4YytIN001enBUdU82STlPK1Vjejd4c2k3RVAwOE9vbHlOZER0M0x5CmtJSFJLZ3lYQWwzdFNhRDFCU21QZTRudjNJRll5d3NmLytUckc5WnBia0ZOSXVuYTRlK3NsVkFoQWxNb3FUb2RlejNnb1d3SHJac3cKWjNpSUsxNmVOUGE1UzM1aHo2NGVSVFdFMHEwWTJoMUN3akhsTnA5MjJQUFhQNFNrSFExNTJnYi90M1RmUXVQdEJaQXBSUG9iVVBneApCaWF3MlBOd25HcWJLbUJQanJUVmg5L3FaUFViM3dLQ0FRRUEwUTU2SC9YVElRdGJqRkoyakM2dGdpWWQ0SC8vdS80QkdGQ3c5elV5CkFUUTh0aTJNRDZ0VGF2aXdzVmNaUUt6UkEzRHVKVWJUMTR6bWtDdXFkYVhVdDR3MXNaTEpFbUhLaU5hampVa1JuK0cwY0Z6VUFwRnQKanVta0djN3ZER3lQczBsQThtdlA3cExmVkV1a0EvREdZYVRxMnYxbkdGRjdLQ1dLcW0yWmxEYWlWSTBUd2ZpQnRuNGdsV2ppV0NZMwo0b3NUdEVSZ0xtc1pnOHI5QmFFL1lMcjJPMDc5WDRpRzBFUnF1b1o1blZqRk1NZ0t5Q2E3VHJSdjh6RXI2N0ZFa21qNnc3aHhMcXhaCmRmNDdiNGUxZ0tiSEVKMXpjVS84N3hKaFkwQkc1QmNiL0p1anI2VkcvbGNNUytZeXBhUkE0WERtd3kwbG1WdC9Vd1Byb0JLQ1R3S0MKQVFFQXlBWjBlTFA5WGw3ZGc5RUREVXMvcXJSaUF0eHBuRE1qQWxCSG1KMnl3MnJ1K3pPNHNvM09jUitvdFdrMGl0K0xtWFZyb0FkQgp1WVVzTCtBeWs5Z3M5VWoxalgwYWNkcVRGTEdQN1owOFAwK0dldXo1NXdzQ1RkNEx1WkFPYjZjZzlTZmNkM29IeWlQOWc0djF5WTdCCjlMb3FrVHFzaG5GTCtqQzFic1ZCTWhDRzhnSkc5Y2NhS3dsbERXMHJ6SHlWaXBHZTkxYjhOdng1REU1Q1N2a1A1WmtwelFJTHhyamcKRlFtNUhSTUJMNzJtOVI3Y2REcEJDdjVGRHZJSUx2cllGRTF6VmUwZlg5dDZRTFNXTGpTdVFXZlJ3QldjbG5DbmtzamNlcHNic0ROdQpUSzNjeThBK2tWSXZWQjdrRHZXbUVDN054RjIwV1lPTVd5T0h5N1BwTFFLQ0FRQXpROUNRMjlCZFR4S3hFMXU4dm9tUDI5Y0J3WUd0CjBQamx4SXZRNHp1UzdnTmhUVVFHWjZYNkdtZ0I1UER0V2pPYkcydGF1c2FpR2d4RUdHRWhubnZPVXRTcjZlbmkxeFk2ZmgvM09vN1cKM1J0Slhvb2k0eFN4c2Z1cTFJTHNVZ2JmR1R5UzlmczBidEhUTXdWU2JnM0h6aEJGaVZScHN6bDNPOVdJTzM0b3lVai9ZT1VTY09VbQpJa0hOUWI0WGphK3dueGhDNFcyUWxIVGFTOEhHU3FkbkNoSHRzMDRReWtMOCtYb09xWUZUSTN5Zm5MNkFISGRjTW9VdFpzWjFjcS8xCkUwZEREWXk3dkVubjFHTXcwMStmMzhYNi9oRmNIUmhTYS9oenhVUmRGSW1wWldVN1lsVkpjNEV4YjQ3RjdjUjNSQjlpaDBTc0diTGMKWVo2N1R5NmpBb0lCQVFDT2Foa01mZGpraU5QdVFRa0dtOUx0WVRRYWRyTnFyaUQreVVYRkR0Um9MaFpEdloyN3dsKzBpckVkUWVTUwpjNWpteWhRb294enVoN3V6UlJaQ0tLQ0U0UlNvZTh3R0hYMzY5NXNDQWdzK1BsSHVVdVl2NmZLdy85cW5tdzlSMWhlelBON0FzSUpECjZsc2pYQlhjSTNJcEZFbkNDbXh4dld4QjE0UU5QNUYrMDBuZWJERlhRaVVDcG1qNDVzUW9OYWtERnRGTVRVbjRDVWFSazhWbHpGbmIKWGlWTGdzZkJtV3FVWWdHRTRRMXBXM1NCN1owek9HQ0x2QUEweHB2bVdFL1dYdktYZ2YvT3k3NjVnWHVzaUZZSHR2MXRWZjlvb0NIeApORDVBZGRjQlZxY2ZQLzY1bWw3bzlBQmFtN2I4SGZTZk5VNVNQd0tIVGhnUU11WTlmRUE3Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0=
+
+###########################
+# PAM Radius configuration
+###########################
+# server, shared secret, timeout (s)
+pam_radius_config: |
+  127.0.0.1     secret         1
+  other-server  other-secret   3
+
+#######################
+# Zabbix configuration
+#######################
+zabbix_server: 192.168.50.20
+
+############################
+# Public host configuration
+############################
+yoda_public_host: combined.yoda.test   # Yoda public host
+yoda_public_fqdn: public.yoda.test     # Yoda public fully qualified domain name (FQDN)
+
+# Yoda public upload private key (base64 encoded)
+# ssh-keygen -t ed25519 -> base64
+upload_priv_key: |
+  LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
+  QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
+  UUFBQUNDTGlhY01DT2xPZzNpSFg4VXdYOHpWUk11cFB2Y2NyTTdmQUNodU9WMi80UUFBQUpoQTVj
+  YTlRT1hHCnZRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQ0xpYWNNQ09sT2czaUhYOFV3WDh6VlJN
+  dXBQdmNjck03ZkFDaHVPVjIvNFEKQUFBRUFtRng0MmVDSDBYOHFHaXpmUmFpcFJWa3MzcVo1OWda
+  SU92TUJkZy85SnhZdUpwd3dJNlU2RGVJZGZ4VEJmek5WRQp5NmsrOXh5c3p0OEFLRzQ1WGIvaEFB
+  QUFEbWx5YjJSelFHTnZiV0pwYm1Wa0FRSURCQVVHQnc9PQotLS0tLUVORCBPUEVOU1NIIFBSSVZB
+  VEUgS0VZLS0tLS0K
+
+# Yoda public upload public key (base64 encoded)
+upload_pub_key: |
+  c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUl1SnB3d0k2VTZEZUlkZnhUQmZ6
+  TlZFeTZrKzl4eXN6dDhBS0c0NVhiL2ggaXJvZHNAY29tYmluZWQK
+
+######################################
+# External user service configuration
+######################################
+yoda_eus_fqdn: portal.yoda.test
+eus_api_fqdn: api.eus.yoda.test
+eus_api_secret: jk93aeJbYxjCywTJxDunbuvY
+eus_db_password: ZYtDDpoNL5jWd8JiNwrAVQUu
+eus_smtp_host: smtp.gmail.com
+eus_smtp_port: 587
+eus_smtp_user: yodamailtest@gmail.com
+eus_smtp_password: yodamailtest123
+eus_smtp_from_address: yodamailtest@gmail.com
+eus_smtp_replyto_address: yodamailtest@gmail.com
+eus_mail_template: uu
+
+###########################
+# Test configuration.
+###########################
+test_password: usetheforce
+
